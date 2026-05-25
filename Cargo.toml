@@ -2,19 +2,11 @@
 name = "llm-cost-cap"
 version = "0.1.0"
 edition = "2021"
+description = "Pre-flight USD cost gate for LLM calls"
 license = "MIT"
-description = "Pre-flight USD cost gate for LLM calls. Estimate input plus output cost from token counts and reject calls that would exceed a configured cap."
-keywords = ["llm", "cost", "budget", "ai", "agents"]
-categories = ["api-bindings", "rust-patterns"]
 repository = "https://github.com/MukundaKatta/llm-cost-cap-rs"
-readme = "README.md"
-
-[features]
-default = []
-serde = ["dep:serde"]
+keywords = ["llm", "cost", "budget", "anthropic", "openai"]
+categories = ["api-bindings"]
+exclude = ["target/*", ".github/*", "*.log"]
 
 [dependencies]
-serde = { version = "1", features = ["derive"], optional = true }
-
-[dev-dependencies]
-serde_json = "1"
