@@ -12,7 +12,10 @@ fn builtin_prices_contains_required_models() {
         "gemini-2.5-pro",
         "gemini-2.5-flash",
     ] {
-        assert!(table.contains_key(model), "missing required model {model:?}");
+        assert!(
+            table.contains_key(model),
+            "missing required model {model:?}"
+        );
     }
 }
 

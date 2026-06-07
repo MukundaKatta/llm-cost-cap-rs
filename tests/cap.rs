@@ -70,9 +70,7 @@ fn cached_input_reduces_cost_when_model_publishes_cached_rate() {
 #[test]
 fn cached_input_is_zero_when_model_has_no_cached_rate() {
     let cap = CostCap::new(10.0);
-    let est = cap
-        .estimate_with_cached("gpt-5", 0, 0, 1_000_000)
-        .unwrap();
+    let est = cap.estimate_with_cached("gpt-5", 0, 0, 1_000_000).unwrap();
     assert_eq!(est.cached_input_usd, 0.0);
 }
 
@@ -147,7 +145,9 @@ fn check_just_over_cap_fails() {
 fn run_invokes_fn_and_returns_result_when_under_cap() {
     let cap = CostCap::new(10.0);
     let result = cap
-        .run("claude-sonnet-4-6", 500, 500, || String::from("echo: hello"))
+        .run("claude-sonnet-4-6", 500, 500, || {
+            String::from("echo: hello")
+        })
         .unwrap();
     assert_eq!(result, "echo: hello");
 }

@@ -234,12 +234,8 @@ impl CostCap {
         max_output_tokens: u64,
         cached_input_tokens: u64,
     ) -> Result<EstimatedCost, CheckError> {
-        let est = self.estimate_with_cached(
-            model,
-            input_tokens,
-            max_output_tokens,
-            cached_input_tokens,
-        )?;
+        let est =
+            self.estimate_with_cached(model, input_tokens, max_output_tokens, cached_input_tokens)?;
         if est.total_usd > self.cap_usd {
             return Err(CheckError::CapExceeded(CapExceeded {
                 projected_usd: est.total_usd,

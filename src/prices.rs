@@ -47,12 +47,30 @@ impl ModelPrice {
 // Canonical models. USD per 1M tokens as of 2026-05-24.
 const BUILTIN: &[(&str, ModelPrice)] = &[
     // Anthropic
-    ("claude-opus-4-7", ModelPrice::with_cached(15.00, 75.00, 1.50)),
-    ("claude-opus-4-6", ModelPrice::with_cached(15.00, 75.00, 1.50)),
-    ("claude-opus-4-5", ModelPrice::with_cached(15.00, 75.00, 1.50)),
-    ("claude-sonnet-4-6", ModelPrice::with_cached(3.00, 15.00, 0.30)),
-    ("claude-sonnet-4-5", ModelPrice::with_cached(3.00, 15.00, 0.30)),
-    ("claude-haiku-4-5", ModelPrice::with_cached(0.80, 4.00, 0.08)),
+    (
+        "claude-opus-4-7",
+        ModelPrice::with_cached(15.00, 75.00, 1.50),
+    ),
+    (
+        "claude-opus-4-6",
+        ModelPrice::with_cached(15.00, 75.00, 1.50),
+    ),
+    (
+        "claude-opus-4-5",
+        ModelPrice::with_cached(15.00, 75.00, 1.50),
+    ),
+    (
+        "claude-sonnet-4-6",
+        ModelPrice::with_cached(3.00, 15.00, 0.30),
+    ),
+    (
+        "claude-sonnet-4-5",
+        ModelPrice::with_cached(3.00, 15.00, 0.30),
+    ),
+    (
+        "claude-haiku-4-5",
+        ModelPrice::with_cached(0.80, 4.00, 0.08),
+    ),
     // OpenAI
     ("gpt-5.4", ModelPrice::new(1.25, 10.00)),
     ("gpt-5", ModelPrice::new(1.25, 10.00)),
@@ -62,11 +80,23 @@ const BUILTIN: &[(&str, ModelPrice)] = &[
     ("gemini-2.5-pro", ModelPrice::new(1.25, 10.00)),
     ("gemini-2.5-flash", ModelPrice::new(0.30, 2.50)),
     // AWS Bedrock - Anthropic
-    ("anthropic.claude-opus-4-7-v1:0", ModelPrice::with_cached(15.00, 75.00, 1.50)),
-    ("anthropic.claude-sonnet-4-6-v1:0", ModelPrice::with_cached(3.00, 15.00, 0.30)),
-    ("anthropic.claude-haiku-4-5-v1:0", ModelPrice::with_cached(0.80, 4.00, 0.08)),
+    (
+        "anthropic.claude-opus-4-7-v1:0",
+        ModelPrice::with_cached(15.00, 75.00, 1.50),
+    ),
+    (
+        "anthropic.claude-sonnet-4-6-v1:0",
+        ModelPrice::with_cached(3.00, 15.00, 0.30),
+    ),
+    (
+        "anthropic.claude-haiku-4-5-v1:0",
+        ModelPrice::with_cached(0.80, 4.00, 0.08),
+    ),
     // AWS Bedrock - Meta
-    ("meta.llama3-1-70b-instruct-v1:0", ModelPrice::new(2.65, 3.50)),
+    (
+        "meta.llama3-1-70b-instruct-v1:0",
+        ModelPrice::new(2.65, 3.50),
+    ),
 ];
 
 const ALIASES: &[(&str, &str)] = &[
