@@ -40,6 +40,29 @@ impl fmt::Display for CapExceeded {
 
 impl Error for CapExceeded {}
 
+/// Returned when the estimated cost is not a finite number (NaN or
+/// infinity), which can happen if a custom [`ModelPrice`] carries a
+/// non-finite rate (e.g. parsed from malformed config). The gate fails
+/// closed in this case rather than letting a call with an undefined cost
+/// slip through.
+#[derive(Debug, Clone, PartialEq)]
+pub struct NonFiniteCost {
+    pub projected_usd: f64,
+    pub model: String,
+}
+
+impl fmt::Display for NonFiniteCost {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "estimated cost for model {:?} is not finite ({}); refusing the call",
+            self.model, self.projected_usd
+        )
+    }
+}
+
+impl Error for NonFiniteCost {}
+
 /// Returned when a model id is not in the price table.
 #[derive(Debug, Clone, PartialEq)]
 pub struct UnknownModel {
@@ -83,10 +106,17 @@ impl From<UnknownModel> for EstimateError {
 }
 
 /// Errors returned by [`CostCap::check`].
+///
+/// Marked `#[non_exhaustive]`: match on it with a trailing `_` arm so
+/// that adding future variants is not a breaking change for callers.
 #[derive(Debug, Clone, PartialEq)]
+#[non_exhaustive]
 pub enum CheckError {
     UnknownModel(UnknownModel),
     CapExceeded(CapExceeded),
+    /// The estimate was not a finite number (NaN/inf). The gate fails
+    /// closed rather than admitting a call with an undefined cost.
+    NonFiniteCost(NonFiniteCost),
 }
 
 impl fmt::Display for CheckError {
@@ -94,6 +124,7 @@ impl fmt::Display for CheckError {
         match self {
             CheckError::UnknownModel(e) => e.fmt(f),
             CheckError::CapExceeded(e) => e.fmt(f),
+            CheckError::NonFiniteCost(e) => e.fmt(f),
         }
     }
 }
@@ -109,6 +140,12 @@ impl From<UnknownModel> for CheckError {
 impl From<CapExceeded> for CheckError {
     fn from(e: CapExceeded) -> Self {
         CheckError::CapExceeded(e)
+    }
+}
+
+impl From<NonFiniteCost> for CheckError {
+    fn from(e: NonFiniteCost) -> Self {
+        CheckError::NonFiniteCost(e)
     }
 }
 
@@ -236,6 +273,17 @@ impl CostCap {
     ) -> Result<EstimatedCost, CheckError> {
         let est =
             self.estimate_with_cached(model, input_tokens, max_output_tokens, cached_input_tokens)?;
+        // Fail closed on a non-finite estimate. A NaN or infinite cost can
+        // arise from a custom ModelPrice with a non-finite rate; because
+        // `NaN > cap` is always false, a naive comparison would let such a
+        // call slip through the gate — the exact failure mode this crate
+        // exists to prevent.
+        if !est.total_usd.is_finite() {
+            return Err(CheckError::NonFiniteCost(NonFiniteCost {
+                projected_usd: est.total_usd,
+                model: model.to_string(),
+            }));
+        }
         if est.total_usd > self.cap_usd {
             return Err(CheckError::CapExceeded(CapExceeded {
                 projected_usd: est.total_usd,
