@@ -1,6 +1,7 @@
 # llm-cost-cap
 
 [![Crates.io](https://img.shields.io/crates/v/llm-cost-cap.svg)](https://crates.io/crates/llm-cost-cap)
+[![CI](https://github.com/MukundaKatta/llm-cost-cap-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/MukundaKatta/llm-cost-cap-rs/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 Pre-flight USD cost gate for a single LLM call.
@@ -11,6 +12,10 @@ and reject if it would exceed a configured per-call cap. Catches the
 failure mode where an agent burns $20 on one call before the call ever
 leaves the process. Zero non-std deps. Built-in price table covers
 Anthropic, OpenAI, Gemini, and Bedrock variants.
+
+The gate **fails closed**: an unknown model, or a custom price that
+produces a non-finite (NaN/∞) estimate, is rejected rather than waved
+through. See [Errors](#errors).
 
 ## Install
 
@@ -32,6 +37,8 @@ match cap.check("claude-opus-4-7", 10_000, 4_000) {
         println!("rejected {}: ${:.4} > ${:.4}", e.model, e.projected_usd, e.cap_usd);
     }
     Err(CheckError::UnknownModel(e)) => panic!("missing model: {}", e.model),
+    // `CheckError` is `#[non_exhaustive]`, so always include a catch-all.
+    Err(e) => println!("rejected: {e}"),
 }
 ```
 
@@ -73,6 +80,24 @@ Or register one model into an existing cap:
 let mut cap = CostCap::new(1.0);
 cap.add_model("homemade", ModelPrice::new(0.5, 1.5));
 ```
+
+## Errors
+
+`check()` (and `run()`) return `Result<_, CheckError>`. `CheckError` is
+`#[non_exhaustive]`, so always include a catch-all `_` arm when matching:
+
+| Variant                    | When                                                              |
+| -------------------------- | ---------------------------------------------------------------- |
+| `CheckError::CapExceeded`  | The projected cost is above the configured cap.                  |
+| `CheckError::UnknownModel` | The model id is not in the price table.                          |
+| `CheckError::NonFiniteCost`| The estimate is NaN or ∞ (e.g. a custom price with a bad rate).  |
+
+The `NonFiniteCost` case exists because `NaN > cap` is always `false` in
+IEEE-754: a naive comparison would silently admit a call whose cost is
+undefined. The gate rejects it instead, so a malformed custom price
+table can never disable the cap. `estimate()` performs no gating and
+returns `EstimateError` only for an unknown model. Every error type
+implements `std::error::Error`.
 
 ## Features
 

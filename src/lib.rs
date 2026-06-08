@@ -21,6 +21,9 @@ match cap.check("claude-opus-4-7", 10_000, 4_000) {
         eprintln!("rejected {}: ${:.4} > ${:.4}", e.model, e.projected_usd, e.cap_usd);
     }
     Err(CheckError::UnknownModel(e)) => panic!("missing model: {}", e.model),
+    // `CheckError` is `#[non_exhaustive]`; handle anything else (e.g. a
+    // non-finite estimate from a bad custom price) with a catch-all arm.
+    Err(e) => eprintln!("rejected: {e}"),
 }
 ```
 */
@@ -28,5 +31,7 @@ match cap.check("claude-opus-4-7", 10_000, 4_000) {
 mod cap;
 mod prices;
 
-pub use cap::{CapExceeded, CheckError, CostCap, EstimateError, EstimatedCost, UnknownModel};
+pub use cap::{
+    CapExceeded, CheckError, CostCap, EstimateError, EstimatedCost, NonFiniteCost, UnknownModel,
+};
 pub use prices::{builtin_prices, known_models, ModelPrice, MODEL_PRICES};

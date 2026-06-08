@@ -1,5 +1,6 @@
 use llm_cost_cap::{
-    CapExceeded, CheckError, CostCap, EstimateError, EstimatedCost, ModelPrice, UnknownModel,
+    CapExceeded, CheckError, CostCap, EstimateError, EstimatedCost, ModelPrice, NonFiniteCost,
+    UnknownModel,
 };
 use std::collections::HashMap;
 
@@ -139,6 +140,69 @@ fn check_just_over_cap_fails() {
     assert!(matches!(err, CheckError::CapExceeded(_)));
 }
 
+// ---------- non-finite cost (fail-closed) ----------
+
+#[test]
+fn nan_rate_fails_closed_instead_of_passing_the_gate() {
+    // A custom price with a NaN rate yields a NaN estimate. Because
+    // `NaN > cap` is always false, a naive gate would let this call
+    // through. The gate must instead reject it.
+    let mut cap = CostCap::new(0.10);
+    cap.add_model("broken", ModelPrice::new(f64::NAN, 1.0));
+    let err = cap.check("broken", 1_000, 1_000).unwrap_err();
+    match err {
+        CheckError::NonFiniteCost(NonFiniteCost {
+            projected_usd,
+            model,
+        }) => {
+            assert_eq!(model, "broken");
+            assert!(projected_usd.is_nan());
+        }
+        other => panic!("expected NonFiniteCost, got {other:?}"),
+    }
+}
+
+#[test]
+fn infinite_rate_fails_closed() {
+    let mut cap = CostCap::new(1.0);
+    cap.add_model("huge", ModelPrice::new(f64::INFINITY, 0.0));
+    let err = cap.check("huge", 1, 0).unwrap_err();
+    assert!(matches!(err, CheckError::NonFiniteCost(_)));
+}
+
+#[test]
+fn run_does_not_invoke_fn_on_non_finite_cost() {
+    let mut cap = CostCap::new(0.10);
+    cap.add_model("broken", ModelPrice::new(f64::NAN, 1.0));
+    let calls = std::cell::Cell::new(0u32);
+    let err = cap
+        .run("broken", 10, 10, || {
+            calls.set(calls.get() + 1);
+            "nope"
+        })
+        .unwrap_err();
+    assert!(matches!(err, CheckError::NonFiniteCost(_)));
+    assert_eq!(calls.get(), 0);
+}
+
+#[test]
+fn non_finite_cost_display_names_the_model() {
+    let mut cap = CostCap::new(0.10);
+    cap.add_model("broken", ModelPrice::new(f64::NAN, 1.0));
+    let err = cap.check("broken", 10, 10).unwrap_err();
+    let msg = err.to_string();
+    assert!(msg.contains("broken"));
+    assert!(msg.contains("not finite"));
+}
+
+#[test]
+fn finite_estimate_still_passes_normally_after_fix() {
+    // Guard against the fix accidentally rejecting ordinary calls.
+    let cap = CostCap::new(0.50);
+    let est = cap.check("claude-opus-4-7", 1000, 1000).unwrap();
+    assert!(est.total_usd.is_finite());
+}
+
 // ---------- run ----------
 
 #[test]
@@ -269,6 +333,7 @@ fn errors_implement_std_error() {
     fn assert_err<E: std::error::Error>() {}
     assert_err::<CapExceeded>();
     assert_err::<UnknownModel>();
+    assert_err::<NonFiniteCost>();
     assert_err::<EstimateError>();
     assert_err::<CheckError>();
 }
